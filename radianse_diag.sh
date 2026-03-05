@@ -12,19 +12,29 @@ set -euo pipefail
 
 # Directories whose logs are bundled in the Full Diagnostic (Option 1) archive.
 FULL_DIAG_LOG_DIRS=(
-    "/home/Director/RadianseServices/logs"
-    "/home/Director/UpdateService/logs"
-    # "/home/Director/AnotherService/logs"   # <-- add more here
+    "/home/radianse/Director/RadianseServices/logs"
+    "/home/radianse/Director/UpdateService/logs"
+    "/home/radianse/Director/ServiceManager/logs"
+    "/home/radianse/Hub/HubManager/logs"
+    "/home/radianse/RadianseInstallManager/logs"
+    "/home/radianse/logs"
+
+    # "/home/radianse/Director/AnotherService/logs"   # <-- add more here
 )
 
 # Directories collected by the Log Collection tool (Option 4).
 # Can overlap with the above — add any extra paths you want here too.
 LOG_COLLECTION_DIRS=(
-    "/home/Director/RadianseServices/logs"
-    "/home/Director/UpdateService/logs"
-    # "/home/Director/AnotherService/logs"   # <-- add more here
+    "/home/radianse/Director/RadianseServices/logs"
+    "/home/radianse/Director/UpdateService/logs"
+    "/home/radianse/Director/ServiceManager/logs"
+    "/home/radianse/Hub/HubManager/logs"
+    "/home/radianse/RadianseInstallManager/logs"
+    "/home/radianse/logs"
+    
+    # "/home/radianse/Director/AnotherService/logs"   # <-- add more here
     # "/var/log/radianse"                    # <-- example: system-level log dir
-    # "/home/Director/SomeOtherService/logs" # <-- add as many as needed
+    # "/home/radianse/Director/SomeOtherService/logs" # <-- add as many as needed
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
