@@ -344,19 +344,22 @@ run_brief_snapshot() {
     else                                 ok   "Memory usage normal (${MEM_PCT}%)"; fi
 
     section "DISK USAGE"
-    df -h --output=target,size,used,avail,pcent 2>/dev/null \
+    df -h 2>/dev/null \
         | grep -v "^tmpfs\|^devtmpfs\|^udev\|^Filesystem" \
         | while IFS= read -r line; do
-            MOUNT=$(echo "${line}" | awk '{print $1}')
+            FILESYSTEM=$(echo "${line}" | awk '{print $1}')
             SIZE=$(echo  "${line}" | awk '{print $2}')
             USED=$(echo  "${line}" | awk '{print $3}')
             AVAIL=$(echo "${line}" | awk '{print $4}')
             PCT=$(echo   "${line}" | awk '{print $5}')
+            MOUNT=$(echo "${line}" | awk '{print $6}')
             PCT_NUM="${PCT/\%/}"
+            # Skip any line that didn't parse into a real mount (e.g. wrapped lines)
+            [[ -z "${MOUNT}" || -z "${PCT_NUM}" ]] && continue
             printf "  ${BOLD}%-20s${RESET} %s used of %s  (%s free)  %s\n" \
                 "${MOUNT}" "${USED}" "${SIZE}" "${AVAIL}" "${PCT}"
-            if   [[ "${PCT_NUM}" -ge 90 ]]; then echo -e "  ${RED}        [!!] Disk almost full${RESET}"
-            elif [[ "${PCT_NUM}" -ge 80 ]]; then echo -e "  ${YELLOW}        [!]  Disk usage high${RESET}"; fi
+            if   [[ "${PCT_NUM}" -ge 90 ]] 2>/dev/null; then echo -e "  ${RED}        [!!] Disk almost full${RESET}"
+            elif [[ "${PCT_NUM}" -ge 80 ]] 2>/dev/null; then echo -e "  ${YELLOW}        [!]  Disk usage high${RESET}"; fi
           done
     echo ""
     FS_FLAGS=$(grep " ro," /proc/mounts 2>/dev/null | grep -v "tmpfs\|proc\|sys\|devpts\|run" || true)
