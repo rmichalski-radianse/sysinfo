@@ -10,7 +10,7 @@ A diagnostic script for Radianse kiosk Raspberry Pi units. Intended for use when
 sudo bash radianse_diag.sh
 ```
 
-> `sudo` is required for cache flushing (disk read benchmarks), some `dmesg` / kernel reads, and raw device access during the SD card test. Run it from whatever directory you want output archives dropped in.
+> The script requires `sudo` and will exit immediately with an error message if run without it. `sudo` is needed for cache flushing (disk read benchmarks), some `dmesg` / kernel reads, and raw device access during the SD card test. Run it from whatever directory you want output archives dropped in.
 
 ---
 
@@ -94,7 +94,17 @@ radianse_diag_<hostname>_<timestamp>/
 
 Live terminal readout of current system state. Nothing is saved to disk.
 
-Displays: uptime, load average, temperature, CPU throttle flags decoded, memory usage with swap, disk usage per mount with fill-level warnings, SD card filesystem health indicators, CPU usage percentage, top 8 processes by CPU and memory, connected serial/USB devices with manufacturer info, and any failed systemd units.
+Displays: uptime, load average, temperature, CPU throttle flags decoded, memory usage with swap, disk usage per mount with fill-level warnings, SD card filesystem health indicators, CPU usage percentage, top 8 processes by CPU and memory, **SecureVendor / BackOffice network status** (see below), connected serial/USB devices with manufacturer info, and any failed systemd units.
+
+### SecureVendor / BackOffice IP Check
+
+The quick snapshot checks all assigned IPv4 addresses and reports one of three states:
+
+| Result | Meaning |
+|--------|---------|
+| `[OK] Hub has the correct SecureVendor IP: 172.16.50.2` | The hub is on the SecureVendor network with the expected static IP |
+| `[OK] Hub is utilizing BackOffice Network (IP: x.x.x.x)` | The hub has an address in the `192.168.200.0/24` subnet |
+| `[!!] Neither SecureVendor IP nor BackOffice subnet detected` | Unexpected network configuration — current IPs are listed below the warning |
 
 ---
 
@@ -151,16 +161,24 @@ Both log directory lists are at the top of the script:
 ```bash
 # Logs included in the Full Diagnostic archive (Option 1)
 FULL_DIAG_LOG_DIRS=(
-    "/home/Director/RadianseServices/logs"
-    "/home/Director/UpdateService/logs"
-    # "/home/Director/AnotherService/logs"
+    "/home/radianse/Director/RadianseServices/logs"
+    "/home/radianse/Director/UpdateService/logs"
+    "/home/radianse/Director/ServiceManager/logs"
+    "/home/radianse/Hub/HubManager/logs"
+    "/home/radianse/RadianseInstallManager/logs"
+    "/home/radianse/logs"
+    # "/home/radianse/AnotherService/logs"
 )
 
 # Logs collected by the Log Collection tool (Option 4)
 LOG_COLLECTION_DIRS=(
-    "/home/Director/RadianseServices/logs"
-    "/home/Director/UpdateService/logs"
-    # "/home/Director/AnotherService/logs"
+    "/home/radianse/Director/RadianseServices/logs"
+    "/home/radianse/Director/UpdateService/logs"
+    "/home/radianse/Director/ServiceManager/logs"
+    "/home/radianse/Hub/HubManager/logs"
+    "/home/radianse/RadianseInstallManager/logs"
+    "/home/radianse/logs"
+    # "/home/radianse/AnotherService/logs"
     # "/var/log/radianse"
 )
 ```

@@ -7,6 +7,21 @@
 set -euo pipefail
 
 # ──────────────────────────────────────────────────────────────────────────────
+# SUDO CHECK
+# ──────────────────────────────────────────────────────────────────────────────
+if [[ "${EUID}" -ne 0 ]]; then
+    echo ""
+    echo "  ╔══════════════════════════════════════════════════════════╗"
+    echo "  ║  This script must be run with sudo.                     ║"
+    echo "  ║                                                          ║"
+    echo "  ║  Please re-run as:                                       ║"
+    echo "  ║    sudo bash radianse_diag.sh                            ║"
+    echo "  ╚══════════════════════════════════════════════════════════╝"
+    echo ""
+    exit 1
+fi
+
+# ──────────────────────────────────────────────────────────────────────────────
 # CONFIGURATION
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -18,8 +33,7 @@ FULL_DIAG_LOG_DIRS=(
     "/home/radianse/Hub/HubManager/logs"
     "/home/radianse/RadianseInstallManager/logs"
     "/home/radianse/logs"
-
-    # "/home/radianse/Director/AnotherService/logs"   # <-- add more here
+    # "/home/radianse/AnotherService/logs"   # <-- add more here
 )
 
 # Directories collected by the Log Collection tool (Option 4).
@@ -31,10 +45,8 @@ LOG_COLLECTION_DIRS=(
     "/home/radianse/Hub/HubManager/logs"
     "/home/radianse/RadianseInstallManager/logs"
     "/home/radianse/logs"
-    
-    # "/home/radianse/Director/AnotherService/logs"   # <-- add more here
+    # "/home/radianse/AnotherService/logs"   # <-- add more here
     # "/var/log/radianse"                    # <-- example: system-level log dir
-    # "/home/radianse/Director/SomeOtherService/logs" # <-- add as many as needed
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -193,6 +205,24 @@ run_full_diagnostic() {
     logcmd "cat /proc/net/dev"; ip -s link >> "${REPORT_FILE}" 2>/dev/null || true
     command -v nslookup &>/dev/null && logcmd "nslookup google.com" || true
     ping -c 3 -W 2 8.8.8.8 &>/dev/null && rlog "  [OK] Connectivity to 8.8.8.8" || rlog "  [!] No response from 8.8.8.8"
+
+    rlog ""; rlog "--- SecureVendor / BackOffice IP check ---"
+    ALL_IPS=$(ip -4 addr show 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 | grep -v '^127\.' || true)
+    SV_FOUND=0; BO_FOUND=0
+    for IP in ${ALL_IPS}; do
+        if [[ "${IP}" == "172.16.50.2" ]]; then
+            rlog "  [OK] Hub has the correct SecureVendor IP: 172.16.50.2"
+            SV_FOUND=1
+        fi
+        if echo "${IP}" | grep -qP '^192\.168\.200\.(25[0-4]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)$'; then
+            rlog "  [OK] Hub is utilizing BackOffice Network  (IP: ${IP})"
+            BO_FOUND=1
+        fi
+    done
+    if [[ $SV_FOUND -eq 0 && $BO_FOUND -eq 0 ]]; then
+        rlog "  [!] Neither SecureVendor IP (172.16.50.2) nor BackOffice subnet (192.168.200.0/24) detected"
+        rlog "      Current IP(s): $(echo "${ALL_IPS}" | tr '\n' ' ')"
+    fi
 
     hdr "9. CHROMIUM & DISPLAY"
     pgrep -a chromium >> "${REPORT_FILE}" 2>/dev/null || rlog "  (no chromium processes)"
@@ -354,6 +384,31 @@ run_brief_snapshot() {
     section "TOP MEMORY CONSUMERS"
     echo -e "  ${BOLD}Top 8 processes by memory:${RESET}"
     ps aux --sort=-%mem | awk 'NR>1 && NR<=9 {printf "  %-10s  %5s%%  %s\n", $1, $4, $11}' | head -8
+
+    section "NETWORK — SECUREVERDOR / BACKOFFICE"
+    # Collect all non-loopback IPv4 addresses assigned to this device
+    ALL_IPS=$(ip -4 addr show 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 | grep -v '^127\.' || true)
+    SV_FOUND=0
+    BO_FOUND=0
+    for IP in ${ALL_IPS}; do
+        if [[ "${IP}" == "172.16.50.2" ]]; then
+            ok "Hub has the correct SecureVendor IP: 172.16.50.2"
+            SV_FOUND=1
+        fi
+        # Check if IP falls in 192.168.200.0/24 (last octet 1-254)
+        if echo "${IP}" | grep -qP '^192\.168\.200\.(25[0-4]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)$'; then
+            ok "Hub is utilizing BackOffice Network  (IP: ${IP})"
+            BO_FOUND=1
+        fi
+    done
+    if [[ $SV_FOUND -eq 0 && $BO_FOUND -eq 0 ]]; then
+        warn "Neither SecureVendor IP (172.16.50.2) nor BackOffice subnet (192.168.200.0/24) detected"
+        if [[ -n "${ALL_IPS}" ]]; then
+            info "Current IP(s): $(echo "${ALL_IPS}" | tr '\n' ' ')"
+        else
+            info "No non-loopback IPv4 addresses found"
+        fi
+    fi
 
     section "SERIAL & USB DEVICES"
     SERIAL_DEVS=$(ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || true)
